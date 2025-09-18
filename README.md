@@ -8,8 +8,9 @@ Monitor GitLab pipelines and sound an alarm when they complete.
 - Status bar integration
 
 ## Installation
-1. Install manually from [Releases](https://github.com/ToddAbbaticchio/pipeline-alarm/releases)
-2. Install from VS Code Marketplace (coming soon - if I feel like it)
+1. Download latest release from [Releases](https://github.com/ToddAbbaticchio/pipeline-alarm/releases)
+2. In VSCode open Command Palette (ctrl+shift+p) and select 'Extensions: Install from VSIX'
+   Install from VS Code Marketplace (coming soon? If I feel like it the hoopjumping to get a publisher account created/approved)
 
 ## Configuration
 Configure the extension through VS Code settings:
