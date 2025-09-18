@@ -5,7 +5,6 @@ import threading
 import os
 import json
 
-# Global flag to stop all operations
 stop_all = threading.Event()
 beep_thread = None
 GITLAB_API_BASE = None
@@ -21,17 +20,13 @@ def listen_for_stop():
             stop_all.set()
             break
 
-def get_config(settings_path:str):
+def get_config(settings_path:str) -> None:
     """Get configuration from VS Code settings or fallback to environment variables"""
     global GITLAB_API_BASE, PROJECT_ID, PAT
-
-    # Try to read from VS Code workspace settings first
-    workspace_settings_path = os.path.join(settings_path, '.vscode', 'settings.json')
-    #print(f"Looking for VS Code settings at: {workspace_settings_path}" )
-
-    if os.path.exists(workspace_settings_path):
+    
+    if os.path.exists(settings_path):
         try:
-            with open(workspace_settings_path, 'r') as f:
+            with open(settings_path, 'r') as f:
                 settings = json.load(f)
                 GITLAB_API_BASE = settings.get('pipelineAlarm.gitlabApiBase') or os.getenv('GITLAB_API_BASE', 'https://oxford.awsdev.infor.com/api/v4')
                 PROJECT_ID = settings.get('pipelineAlarm.projectId') or os.getenv('PROJECT_ID', '20275')
@@ -72,9 +67,11 @@ def _alarm():
     beep_thread = threading.Thread(target=_beep_loop, daemon=True)
     beep_thread.start()
 
-def await_pipeline_completion(pipeline_id, wait_interval=30, max_attempts=60) -> dict:
+def await_pipeline_completion(pipeline_id_or_url, wait_interval=30, max_attempts=60) -> dict:
     start_time = time.time()
     inactive_statuses = {'success', 'manual', 'failed', 'canceled', 'skipped'}
+
+    pipeline_id = pipeline_id_or_url.rstrip('/').split('/')[-1] if '/' in pipeline_id_or_url else pipeline_id_or_url
 
     result = _get_pipeline_status(pipeline_id)
     status = result.get('status')
@@ -131,10 +128,7 @@ if __name__ == '__main__':
         pipeline_id = sys.argv[1]
         settings_path = sys.argv[2]
 
-        print(f"Monitoring pipeline ID: {pipeline_id}")
-        #print(f"Using settings from: {settings_path}")
-
-        get_config(sys.argv[2])
+        get_config(settings_path)
         listener_thread = threading.Thread(target=listen_for_stop, daemon=True)
         listener_thread.start()
         await_pipeline_completion(sys.argv[1])

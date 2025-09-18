@@ -3,7 +3,7 @@ import { exec, ChildProcess } from 'child_process';
 import * as path from 'path';
 
 let currentMonitoringProcess: ChildProcess | null = null;
-let isMonitoring = false;
+let currentStatus = 'Idle';
 let statusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -14,7 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Start monitoring command
     let startCommand = vscode.commands.registerCommand('pipelineAlarm.startMonitoring', async () => {
-        if (isMonitoring) {
+        if (currentStatus === 'Monitoring') {
             vscode.window.showWarningMessage('Pipeline monitoring is already running. Cancel it first to start a new one.');
             return;
         }
@@ -48,17 +48,17 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            const scriptPath = path.join(context.extensionPath, 'scripts', 'pipeline_alarm.py');
             const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
-            const command = `"${pythonPath.execCommand[0]}" "${scriptPath}" "${pipelineId.trim()}" "${workspaceRoot}"`;
-
-            isMonitoring = true;
+            const scriptPath = path.join(context.extensionPath, 'scripts', 'pipeline_alarm.py');
+            const settingsPath = path.join(workspaceRoot, '.vscode', 'settings.json');
+            const command = `"${pythonPath.execCommand[0]}" "${scriptPath}" "${pipelineId.trim()}" "${settingsPath}"`;
+            currentStatus = 'Monitoring';
             updateStatusBar();
 
             const outputChannel = vscode.window.createOutputChannel('Pipeline Alarm');
             outputChannel.show(true);
+            outputChannel.appendLine(`Resolved settingsPath: ${settingsPath}`);
             outputChannel.appendLine(`Starting pipeline monitoring for: ${pipelineId}`);
-            outputChannel.appendLine(`Command: ${command}`);
             outputChannel.appendLine('---');
 
             currentMonitoringProcess = exec(command, {
@@ -74,12 +74,17 @@ export function activate(context: vscode.ExtensionContext) {
                 outputChannel.append(output);
 
                 if (output.includes('ALARM!')) {
-                    vscode.window.showWarningMessage('Pipeline completed! Alarm is sounding.', 'Stop Alarm')
-                        .then(selection => {
-                            if (selection === 'Stop Alarm' && currentMonitoringProcess) {
-                                currentMonitoringProcess.stdin?.write('STOP_ALARM\n');
-                            }
-                        });
+                    currentStatus = 'Alarm';
+                    updateStatusBar();
+                    const modal = vscode.window.showWarningMessage(
+                        'Pipeline completed! Alarm is sounding.',
+                        { modal: true },
+                        'Stop Alarm'
+                    ).then(selection => {
+                        if (selection === 'Stop Alarm' && currentMonitoringProcess) {
+                            currentMonitoringProcess.stdin?.write('STOP_ALARM\n');
+                        }
+                    });
                 }
             });
 
@@ -89,7 +94,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
             currentMonitoringProcess.on('close', (code) => {
-                isMonitoring = false;
+                currentStatus = 'Idle';
                 updateStatusBar();
                 currentMonitoringProcess = null;
 
@@ -103,7 +108,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
             currentMonitoringProcess.on('error', (error) => {
-                isMonitoring = false;
+                currentStatus = 'Idle';
                 updateStatusBar();
                 currentMonitoringProcess = null;
                 outputChannel.appendLine(`Process error: ${error.message}`);
@@ -111,7 +116,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
 
         } catch (error) {
-            isMonitoring = false;
+            currentStatus = 'Idle';
             updateStatusBar();
             vscode.window.showErrorMessage(`Failed to start pipeline monitoring: ${error}`);
         }
@@ -119,35 +124,35 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Stop monitoring command
     let stopCommand = vscode.commands.registerCommand('pipelineAlarm.stopMonitoring', () => {
-        if (currentMonitoringProcess && isMonitoring) {
+        if (currentMonitoringProcess && currentStatus === 'Monitoring') {
             console.log('Stopping pipeline monitoring...');
-
-            currentMonitoringProcess.kill('SIGTERM');
-            setTimeout(() => {
-                if (currentMonitoringProcess && isMonitoring) {
-                    console.log('Force killing process...');
-                    currentMonitoringProcess.kill('SIGKILL');
-                }
-            }, 2000);
-
-            vscode.window.showInformationMessage('Stopping pipeline monitoring and alarm...');
+            currentMonitoringProcess.stdin?.write('STOP_ALARM\n');
+            currentMonitoringProcess = null;
         } else {
             vscode.window.showInformationMessage('No pipeline monitoring is currently running.');
         }
     });
 
     function updateStatusBar() {
-        if (isMonitoring) {
+        if (currentStatus === 'Monitoring') {
             statusBarItem.text = '$(loading~spin) Stop Pipeline Monitor';
             statusBarItem.command = 'pipelineAlarm.stopMonitoring';
             statusBarItem.tooltip = 'Click to stop pipeline monitoring';
             statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-        } else {
-            statusBarItem.text = '$(play) Start Pipeline Monitor';
-            statusBarItem.command = 'pipelineAlarm.startMonitoring';
-            statusBarItem.tooltip = 'Click to start monitoring a GitLab pipeline';
-            statusBarItem.backgroundColor = undefined;
+            return;
         }
+
+        if (currentStatus === 'Alarm') {
+            statusBarItem.text = '$(alert) SHE DONE!!!';
+            statusBarItem.command = 'pipelineAlarm.stopMonitoring';
+            statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+            return;
+        }
+
+        statusBarItem.text = '$(play) Start Pipeline Monitor';
+        statusBarItem.command = 'pipelineAlarm.startMonitoring';
+        statusBarItem.tooltip = 'Click to start monitoring a GitLab pipeline';
+        statusBarItem.backgroundColor = undefined;
     }
 
     context.subscriptions.push(startCommand, stopCommand, statusBarItem);

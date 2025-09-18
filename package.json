@@ -2,7 +2,7 @@
     "name": "pipeline-alarm",
     "displayName": "PipelineAlarm",
     "description": "Monitor GitLab pipelines and sound an alarm when they complete",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "engines": {
         "vscode": "^1.74.0"
     },
@@ -13,12 +13,12 @@
         "commands": [
             {
                 "command": "pipelineAlarm.startMonitoring",
-                "title": "Start Pipeline Monitoring",
+                "title": "Start Monitoring Pipeline",
                 "category": "PipelineAlarm"
             },
             {
-                "command": "pipelineAlarm.cancelMonitoring",
-                "title": "Cancel Pipeline Monitoring",
+                "command": "pipelineAlarm.stopMonitoring",
+                "title": "Stop Monitoring Pipeline",
                 "category": "PipelineAlarm"
             }
         ],
@@ -26,18 +26,35 @@
             "commandPalette": [
                 {
                     "command": "pipelineAlarm.startMonitoring",
-                    "when": "!pipelineAlarm.isMonitoring"
+                    "when": "pipelineAlarm.currentStatus == 'Idle'"
                 },
                 {
-                    "command": "pipelineAlarm.cancelMonitoring",
-                    "when": "pipelineAlarm.isMonitoring"
+                    "command": "pipelineAlarm.stopMonitoring",
+                    "when": "pipelineAlarm.currentStatus == 'Monitoring' || pipelineAlarm.currentStatus == 'Alarm'"
                 }
             ]
+        },
+        "configuration": {
+            "title": "Pipeline Alarm",
+            "properties": {
+                "pipelineAlarm.gitlabApiBase": {
+                    "type": "string",
+                    "default": "https://oxford.awsdev.infor.com/api/v4",
+                    "description": "GitLab API base URL"
+                },
+                "pipelineAlarm.projectId": {
+                    "type": "string",
+                    "default": "",
+                    "description": "GitLab Project ID"
+                },
+                "pipelineAlarm.personalAccessToken": {
+                    "type": "string",
+                    "default": "",
+                    "description": "GitLab Personal Access Token"
+                }
+            }
         }
     },
-    "extensionDependencies": [
-        "ms-python.python"
-    ],
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
