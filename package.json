@@ -2,7 +2,28 @@
     "name": "pipeline-alarm",
     "displayName": "PipelineAlarm",
     "description": "Monitor GitLab pipelines and sound an alarm when they complete",
-    "version": "0.1.1",
+    "version": "0.1.2",
+    "publisher": "ToddAbbaticchio",
+    "author": {
+        "name": "Todd Abbaticchio",
+        "url": "https://github.com/ToddAbbaticchio"
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ToddAbbaticchio/pipeline-alarm.git"
+    },
+    "bugs": {
+        "url": "https://github.com/ToddAbbaticchio/pipeline-alarm/issues"
+    },
+    "homepage": "https://github.com/ToddAbbaticchio/pipeline-alarm#readme",
+    "keywords": [
+        "gitlab",
+        "pipeline",
+        "monitoring",
+        "alarm",
+        "ci/cd"
+    ],
     "engines": {
         "vscode": "^1.74.0"
     },

@@ -59,7 +59,9 @@ def _alarm():
             if is_windows:
                 winsound.Beep(1000, 500)
             else:
-                os.system('tput bel')
+                if not os.environ.get('TERM'):
+                    os.environ['TERM'] = 'xterm'
+                os.system('tput bel 2>/dev/null')
 
             time.sleep(.5)
         exit(0)

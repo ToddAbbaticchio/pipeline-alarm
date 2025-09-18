@@ -1,6 +1,10 @@
 # Change Log
 All notable changes to the "pipeline-alarm" extension will be documented in this file.
 
+## [0.1.2] - 09/18/2025
+### Changed
+- Method for playing alert sound on non-windows machines
+
 ## [0.1.1] - 09/17/2025
 ### Added
 - Support for updating settings file through File > Preferences > Pipeline Alarm menu in VSCode
